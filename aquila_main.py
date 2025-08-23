@@ -166,7 +166,7 @@ class MenuScreen(QtWidgets.QWidget):
             p.setOpacity(1.0)
 
         # Title (optional)
-        title = "AQUILA — Auto Quantification of Images Learning Algorithm"
+        title = "AQUILA — Auto QUantification of Images Learning Algorithm"
         font = QtGui.QFont(self.font())
         font.setPointSize(18)
         font.setBold(True)

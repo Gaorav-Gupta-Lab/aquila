@@ -21,9 +21,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# --------------------------
+# ------------------
 # Core image helpers
-# --------------------------
+# ------------------
 
 def robust_read_image(img_path: Path):
     """Return HxWxC uint8 (RGB/RGBA->RGB). Avoid OME; fallback to Pillow."""
