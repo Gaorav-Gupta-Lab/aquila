@@ -8,6 +8,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="tifffile")
 import numpy as np
 import pandas as pd
 import tifffile as tiff
+import cv2
 from PIL import Image
 import re
 
@@ -24,7 +25,6 @@ import seaborn as sns
 # ------------------
 # Core image helpers
 # ------------------
-
 def robust_read_image(img_path: Path):
     """Return HxWxC uint8 (RGB/RGBA->RGB). Avoid OME; fallback to Pillow."""
     try:
@@ -67,18 +67,19 @@ def difference_of_gaussians_uint8_like(img_uint8: np.ndarray, sigmaA: float, sig
     return dog_shift.astype(np.float32, copy=False)
 
 def segment_nuclei_from_dapi(dapi_u8: np.ndarray,
-                             min_area_px: int = 200,
-                             max_area_px: int = 1000,
-                             foreground: str = "bright",
-                             blur_sigma: float = 1.8,
-                             seed_radius: int = 3):
+                             min_area_px: int,
+                             max_area_px: int,
+                             foreground: str,
+                             blur_sigma: float,
+                             seed_radius: int):
+    
     """Robust nuclei segmentation with erosion-based markers to avoid midline splits."""
     dapi_blur = filters.gaussian(dapi_u8, sigma=blur_sigma, preserve_range=True)
 
     thr = filters.threshold_otsu(dapi_blur)
     mask = (dapi_blur > thr) if foreground == "bright" else (dapi_blur < thr)
 
-    # Clean & heal
+    # Clean small objects and clean up nuclei
     mask = morphology.remove_small_objects(mask, min_area_px)
     mask = morphology.binary_opening(mask, morphology.disk(1))
     mask = morphology.binary_closing(mask, morphology.disk(2))
@@ -161,10 +162,6 @@ def measure_foci(labels: np.ndarray, foci_rc: np.ndarray, intensity_img: np.ndar
     return df_nuclei, df_points
 
 def save_overlay_png(dest_png: Path, base_img: np.ndarray, labels: np.ndarray, foci_rc: np.ndarray):
-    try:
-        import cv2
-    except Exception:
-        return
     base = base_img - base_img.min()
     base = (255.0 * (base / (base.max() if base.max() > 0 else 1))).astype(np.uint8)
     if base.ndim == 2:
@@ -197,6 +194,7 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
         dest_dir = output_dir / sample_name
     else:
         dest_dir = img_path.parent / sample_name
+        log(f"[WARN] No Valid output directory specified, saving to: {dest_dir}")
     dest_dir.mkdir(exist_ok=True)
 
     # Optional: copy original file
@@ -204,7 +202,7 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
         try:
             shutil.copy2(img_path, dest_dir / file_name)
         except Exception as e:
-            log(f"[WARN] Could not copy original: {e}")
+            log(f"[WARN] Could not copy original image: {e}")
 
     arr = robust_read_image(img_path)
     pla_u8 = arr[..., 0]  # Red (PLA)
@@ -249,8 +247,8 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
     df_points.to_csv(points_csv, index=False)
 
     # Overlay
-    overlay_png = dest_dir / f"{sample_name}_overlay.png"
-    save_overlay_png(overlay_png, dog, labels, coords)
+    overlay_png_path = dest_dir / f"{sample_name}_overlay.png"
+    save_overlay_png(overlay_png_path, dog, labels, coords)
 
     log(f"[OK] {file_name} -> {results_csv.name}  (nuclei={len(df_nuclei)}, foci={len(df_points)})")
 
@@ -261,8 +259,7 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
     "points_df": df_points
     }
 
-
-def plot_results_violin(input_df: pd.DataFrame, out_dir: Path, order=None):
+def plot_results(input_df: pd.DataFrame, out_dir: Path, order=None):
     """
     Make a violinplot of foci per nucleus by sample_group.
     Assumes results_df has columns: ['sample_name','nucleus_label','area_px','foci_count',...]
@@ -271,8 +268,33 @@ def plot_results_violin(input_df: pd.DataFrame, out_dir: Path, order=None):
         return None
 
     df = input_df.copy()
+    counts = (df.groupby(['sample_group', 'foci_count'], observed=True)
+                 .size()
+                 .reset_index(name='count'))
+    binned_df = counts.copy()
+    binned_df['foci_count'] = pd.cut(binned_df['foci_count'], bins=[0, 2, 4, 6, 8, np.inf], right=False)
+    binned_df = binned_df.groupby(['foci_count', 'sample_group']).sum().reset_index()
 
-    plt.figure(figsize=(12, 6))
+    palette_violin = ["lightgray", "#5680C4", "#96BBCF"]
+    palette_bars   = ['#181E3B', '#487394', '#C2C7BA', '#EBCC8E', '#D66955']
+    base = 'v3KO'  # baseline used for delta_no_base
+
+
+    # Stacked bar proportions from binned_df (one row per sample_group; columns: sample_group, foci_count, count)
+    pivot_df = (binned_df.pivot(index='sample_group', columns='foci_count', values='count')
+                        .fillna(0)
+                        .reindex(order))
+    pivot_df = pivot_df.div(pivot_df.sum(axis=1), axis=0)
+
+    # ---- layout: violin (top-left), bar (top-right), bar (bottom, span 2 cols) ----
+    fig = plt.figure(figsize=(12, 8), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=2, ncols=2, height_ratios=[1.1, 1.0], width_ratios=[1.05, 1])
+
+    ax_violin_count = fig.add_subplot(gs[0, :])
+    ax_violin_area = fig.add_subplot(gs[1, 0])
+    ax_bar = fig.add_subplot(gs[1, 1])
+
+# ---- (1) Violin with avg. foci counts per nucleus (top row) ----
     sns.violinplot(
         data=df,
         x="sample_group",
@@ -282,23 +304,80 @@ def plot_results_violin(input_df: pd.DataFrame, out_dir: Path, order=None):
         hue="sample_group",
         linecolor="black",
         order=order,
-        palette=["lightgray", "#96BBCF", "#5680C4"] if (order is None or len(set(df["sample_group"])) <= 3) else None,
+        palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
         fill=True,
         density_norm="count",
         bw_adjust=0.8,
         inner_kws={"color": "black", "box_width": 10, "whis_width": 2, "linestyle": '-'},
+        ax=ax_violin_count
     )
     sns.boxplot(
         data=df, 
         x="sample_group", 
         y="foci_count",
         order=order, fliersize=0, width=0.035, linecolor="k", color="white",
-        boxprops=dict(alpha=1), whiskerprops=dict(alpha=0.9))
+        boxprops=dict(alpha=1), whiskerprops=dict(alpha=0.9),
+        ax=ax_violin_count
+    )
+
+    ax_violin_count.set_title("Foci per Nucleus")
+    ax_violin_count.set_xlabel("Sample Group")
+    ax_violin_count.set_ylabel("Foci per nucleus")
     
-    plt.title("Foci per Nucleus by Sample Group")
-    plt.xlabel("Sample Group")
-    plt.ylabel("Foci per nucleus")
-    plt.tight_layout()
+# ---- (2) Violin with avg. foci counts per 1000um (bottom left) ----
+    # Violin metric (density normalized by area):
+    df = df[df["area_px"] > 0].copy()
+    df["foci_per_1000px2"] = df["foci_count"] / (df["area_px"] / 1000.0)
+    df["foci_per_1000px2_log2"] = np.log2(df["foci_per_1000px2"])
+    sns.violinplot(
+        data=df,
+        x="sample_group",
+        y="foci_per_1000px2_log2",
+        inner=None,
+        linewidth=2,
+        hue="sample_group",
+        linecolor="black",
+        order=order,
+        palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
+        fill=True,
+        density_norm="count",
+        bw_adjust=0.8,
+        inner_kws={"color": "black", "box_width": 10, "whis_width": 2, "linestyle": '-'},
+        ax=ax_violin_area
+    )
+    sns.boxplot(
+        data=df,
+        x="sample_group",
+        y="foci_per_1000px2_log2",
+        order=order, fliersize=0, width=0.035, linecolor="k", color="white",
+        boxprops=dict(alpha=1), whiskerprops=dict(alpha=0.9),
+        ax=ax_violin_area
+    )
+
+    ax_violin_area.set_title("Foci per 1000px2")
+    ax_violin_area.set_xlabel("Sample Group")
+    ax_violin_area.set_ylabel("Log2(Foci per 1000px2)")
+
+# ---- (3) Stacked bar with foci bins (bottom right) ----
+    bottom = np.zeros(len(pivot_df), dtype=float)
+    for color, bin_label in zip(palette_bars, pivot_df.columns):
+        vals = pivot_df[bin_label].values
+        bars = ax_bar.bar(pivot_df.index, vals, bottom=bottom, color=color, label=str(bin_label))
+        # Label segments (optional; hide tiny ones)
+        for v, b, bt in zip(vals, bars, bottom):
+            if v >= 0.05:
+                ax_bar.text(b.get_x()+b.get_width()/2, bt+v/2, f"{v*100:.0f}%",
+                            ha="center", va="center", color="white", fontsize=9, weight="bold")
+        bottom += vals
+
+    ax_bar.set_ylim(0, 1)
+    ax_bar.set_ylabel("Proportion")
+    ax_bar.set_xlabel("")
+    ax_bar.set_title("Composition of foci bins", pad=6)
+    ax_bar.legend(title="Num Foci Bin", bbox_to_anchor=(1.02, 1), loc="upper left",
+                borderaxespad=0., frameon=False)
+    
+    sns.despine(ax=ax_bar)
 
     out_path = Path(out_dir) / "segmentation_results.png"
     if out_path.exists():
@@ -367,11 +446,10 @@ class Worker(QtCore.QObject):
             summary_dir = Path(self.params.output_dir) / "Summary"
             summary_dir.mkdir(exist_ok=True)
             combined.to_csv(summary_dir / "all_results_summary.csv", index=False)
-            plot_path = plot_results_violin(combined, summary_dir, order=['v3KO', 'HPQ-', 'HPQ+'])
+            plot_path = plot_results(combined, summary_dir, order=['v3KO', 'HPQ-', 'HPQ+'])
             if plot_path:
                 self.log.emit(f"[OK] Wrote violin summary → {plot_path.name}")
         self.finished.emit()
-
 
 class AquilaWindow(QtWidgets.QWidget):
     def __init__(self):
@@ -409,12 +487,12 @@ class AquilaWindow(QtWidgets.QWidget):
         # --------------------------
         # Detection Parameters Group
         # --------------------------
-        detect_group = QtWidgets.QGroupBox("Detection Parameters")
+        detect_group = QtWidgets.QGroupBox("Focus Detection Parameters")
         detect_layout = QtWidgets.QGridLayout(detect_group)
 
         self.sigmaA = QtWidgets.QDoubleSpinBox(); self.sigmaA.setRange(0.1, 50.0); self.sigmaA.setValue(1.0)
         self.sigmaB = QtWidgets.QDoubleSpinBox(); self.sigmaB.setRange(0.1, 50.0); self.sigmaB.setValue(5.0)
-        self.prominence = QtWidgets.QDoubleSpinBox(); self.prominence.setRange(0.0, 5000.0); self.prominence.setValue(50.0)
+        self.prominence = QtWidgets.QDoubleSpinBox(); self.prominence.setRange(0.0, 5000.0); self.prominence.setValue(35.0)
 
         detect_layout.addWidget(QtWidgets.QLabel("Sigma A (DoG):"), 0, 0); detect_layout.addWidget(self.sigmaA, 0, 1)
         detect_layout.addWidget(QtWidgets.QLabel("Sigma B (DoG):"), 0, 2); detect_layout.addWidget(self.sigmaB, 0, 3)

@@ -80,7 +80,7 @@ class MenuScreen(QtWidgets.QWidget):
 
         # Buttons on top of the painted canvas
         self._btn_run = QtWidgets.QPushButton("Run")
-        self._btn_settings = QtWidgets.QPushButton("Settings")
+        self._btn_settings = QtWidgets.QPushButton("Load Model")
         self._btn_quit = QtWidgets.QPushButton("Quit")
 
         # Style the buttons a bit
@@ -88,6 +88,7 @@ class MenuScreen(QtWidgets.QWidget):
             b.setCursor(QtCore.Qt.PointingHandCursor)
             b.setMinimumWidth(120)
         self._btn_run.setStyleSheet("QPushButton{background:#2d8cff;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#4b9fff;}")
+        self._btn_settings.setStyleSheet("QPushButton{background:#277d18;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#5ba34e;}")
         self._btn_quit.setStyleSheet("QPushButton{background:#b0413e;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#c75c58;}")
 
         # Layout
@@ -181,10 +182,15 @@ class MenuScreen(QtWidgets.QWidget):
 # --------------
 
 class App(QtWidgets.QMainWindow):
-    def __init__(self, logo_path=""):
+    def __init__(self, logo_path="", icon_path=""):
         super().__init__()
         self.setWindowTitle("AQUILA")
         self.resize(1080, 720)
+
+        if icon_path:
+            qicon = QtGui.QIcon(icon_path)
+        if not qicon.isNull():
+            self.setWindowIcon(qicon)
 
         self.stack = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -214,9 +220,11 @@ class App(QtWidgets.QMainWindow):
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    # Point to your PNG logo (recommended transparent background)
-    logo = r"C:\Users\pguer\OneDrive - University of North Carolina at Chapel Hill\Desktop\prog\GuptaLab\AQUILA\scripts\assets\aquila_full_resized.png"
-    win = App(logo_path=logo)
+
+    logo = r".\assets\aquila_full_resized.png"
+    icon = r".\assets\aquila_logo.ico"
+
+    win = App(logo_path=logo, icon_path=icon)
     win.show()
     sys.exit(app.exec())
 
