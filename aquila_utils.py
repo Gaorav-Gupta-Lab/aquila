@@ -491,7 +491,7 @@ class AquilaWindow(QtWidgets.QWidget):
         detect_layout = QtWidgets.QGridLayout(detect_group)
 
         self.sigmaA = QtWidgets.QDoubleSpinBox(); self.sigmaA.setRange(0.1, 50.0); self.sigmaA.setValue(1.0)
-        self.sigmaB = QtWidgets.QDoubleSpinBox(); self.sigmaB.setRange(0.1, 50.0); self.sigmaB.setValue(5.0)
+        self.sigmaB = QtWidgets.QDoubleSpinBox(); self.sigmaB.setRange(0.1, 50.0); self.sigmaB.setValue(8.0)
         self.prominence = QtWidgets.QDoubleSpinBox(); self.prominence.setRange(0.0, 5000.0); self.prominence.setValue(35.0)
 
         detect_layout.addWidget(QtWidgets.QLabel("Sigma A (DoG):"), 0, 0); detect_layout.addWidget(self.sigmaA, 0, 1)
@@ -542,7 +542,7 @@ class AquilaWindow(QtWidgets.QWidget):
         # Run / Stop Buttons
         # ------------------
         btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_run = QtWidgets.QPushButton("Run Analysis")
+        self.btn_run = QtWidgets.QPushButton("▶ Run Analysis")
         self.btn_stop = QtWidgets.QPushButton("■ Stop")
         self.btn_stop.setEnabled(False)
         self.btn_run.clicked.connect(self._start)

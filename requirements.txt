@@ -2,6 +2,7 @@ numpy
 pandas
 tifffile
 Pillow
+pyobjc (only for macOS, optional)
 PySide6
 scikit-image
 scipy

@@ -22,6 +22,8 @@ class Particle:
         )
         self.radius = random.uniform(2.0, 3.5)
         self.maxd = 150.0
+        self.alpha = random.randint(15, 245)
+        self.alpha_multiplier = random.choice([-1, 1])
 
     def update(self):
         p = self.pos
@@ -37,10 +39,16 @@ class Particle:
         if p.y() < b.top()+5 or p.y() > b.bottom()-5:
             self.vel.setY(-self.vel.y())
 
+        self.alpha += 1 * self.alpha_multiplier
+        if self.alpha < 10:
+            self.alpha_multiplier *= -1
+        if self.alpha > 250:
+            self.alpha_multiplier *= -1
+
     def draw(self, painter: QtGui.QPainter, mouse: QtCore.QPointF):
         # dot
         painter.setPen(QtCore.Qt.NoPen)
-        painter.setBrush(QtGui.QColor(255, 255, 255, 220))
+        painter.setBrush(QtGui.QColor(255, 255, 255, self.alpha))
         painter.drawEllipse(self.pos, self.radius, self.radius)
 
         # faint line towards mouse if near
@@ -73,35 +81,142 @@ class MenuScreen(QtWidgets.QWidget):
         self._mouse = QtCore.QPointF(-1000, -1000)
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(16)  # ~60 FPS
+        self._timer.start(20)  # Higher = lower FPS = slower particles
 
         self._particles = []
         self._logo = QtGui.QPixmap(logo_path) if logo_path and Path(logo_path).exists() else QtGui.QPixmap()
 
         # Buttons on top of the painted canvas
-        self._btn_run = QtWidgets.QPushButton("Run")
-        self._btn_settings = QtWidgets.QPushButton("Load Model")
-        self._btn_quit = QtWidgets.QPushButton("Quit")
+        self._btn_run = QtWidgets.QPushButton("▶ Run")
+        self._btn_settings = QtWidgets.QPushButton("↓ Load Model")
+        self._btn_quit = QtWidgets.QPushButton("⏻ Quit")
 
         # Style the buttons a bit
         for b in (self._btn_run, self._btn_settings, self._btn_quit):
             b.setCursor(QtCore.Qt.PointingHandCursor)
-            b.setMinimumWidth(120)
-        self._btn_run.setStyleSheet("QPushButton{background:#2d8cff;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#4b9fff;}")
-        self._btn_settings.setStyleSheet("QPushButton{background:#277d18;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#5ba34e;}")
-        self._btn_quit.setStyleSheet("QPushButton{background:#b0413e;color:white;border-radius:6px;padding:8px 16px;} QPushButton:hover{background:#c75c58;}")
+            b.setMinimumWidth(150)
+        self._btn_run.setStyleSheet("""
+            QPushButton {
+                /* shape & layout */
+                border-radius: 10px;
+                padding: 10px 2px;
+                font-size: 20px;
+                font-weight: 600;
+
+                /* filled gradient */
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 rgba(45, 140, 255, 0.7), stop:1 rgba(31, 111, 216, 0.7));
+                color: white;
+                border: 2px solid transparent;
+
+                /* icon spacing & size (if you add an icon later) */
+                qproperty-iconSize: 18px 18px;
+            }
+
+            /* hover: a touch brighter */
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 #4B9FFF, stop:1 #2D8CFF);
+            }
+
+            /* pressed: slightly darker & “pressed-in” feel */
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 #1E66C1, stop:1 #16539E);
+                padding-top: 15px;      /* nudge content down by 1px */
+                padding-bottom: 13px;
+            }
+
+            /* keyboard focus ring (accessible) */
+            QPushButton:focus {
+                outline: none;
+                border: 2px solid #9CC8FF;     /* light blue ring */
+            }
+            """)
+
+        self._btn_settings.setStyleSheet("""
+            QPushButton {
+                border-radius: 10px;
+                padding: 10px 2px;
+                font-size: 20px;
+                font-weight: 600;
+
+                /* outline variant */
+                background: transparent;
+                color: white;
+                border: 2px solid #5BA34E;
+
+                qproperty-iconSize: 18px 18px;
+            }
+
+            /* hover: faint fill */
+            QPushButton:hover {
+                background: rgba(91, 163, 78, 0.50);
+            }
+
+            /* pressed: a bit darker border & stronger fill */
+            QPushButton:pressed {
+                background: rgba(91, 163, 78, 0.18);
+                border-color: #4D8C40;
+                padding-top: 15px;
+                padding-bottom: 13px;
+            }
+
+            /* focus ring */
+            QPushButton:focus {
+                outline: none;
+                border-color: #8ED08A;     /* accessible ring */
+            }
+            """)
+
+        self._btn_quit.setStyleSheet("""
+            QPushButton {
+                border-radius: 10px;
+                padding: 10px 2px;
+                font-size: 20px;
+                font-weight: 600;
+
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 rgba(195, 74, 71, 0.7), stop:1 rgba(159, 59, 56, 0.7));
+                color: white;
+                border: 2px solid transparent;
+
+                qproperty-iconSize: 18px 18px;
+            }
+
+            /* hover */
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 #D4605C, stop:1 #B04A46);
+            }
+
+            /* pressed */
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 #9A3A37, stop:1 #7E2F2C);
+                padding-top: 15px;
+                padding-bottom: 13px;
+            }
+
+            /* focus ring */
+            QPushButton:focus {
+                outline: none;
+                border: 2px solid #F3B1AF;   /* soft red ring */
+            }
+            """)
+
 
         # Layout
         outer = QtWidgets.QVBoxLayout(self)
-        outer.setContentsMargins(24, 24, 24, 24)
+        outer.setContentsMargins(250, 10, 250, 150)
         outer.addStretch(1)
 
         row = QtWidgets.QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self._btn_run)
-        row.addSpacing(8)
+        row.addSpacing(16)
         row.addWidget(self._btn_settings)
-        row.addSpacing(8)
+        row.addSpacing(16)
         row.addWidget(self._btn_quit)
         row.addStretch(1)
 
@@ -137,7 +252,11 @@ class MenuScreen(QtWidgets.QWidget):
 
     def paintEvent(self, e):
         p = QtGui.QPainter(self)
-        p.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        p.setRenderHints(
+            QtGui.QPainter.Antialiasing |
+            QtGui.QPainter.TextAntialiasing |
+            QtGui.QPainter.SmoothPixmapTransform
+        )
 
         # Background gradient
         grad = QtGui.QLinearGradient(0, 0, 0, self.height())
@@ -153,21 +272,28 @@ class MenuScreen(QtWidgets.QWidget):
         if not self._logo.isNull():
             scale = 1.0
             lw, lh = self._logo.width(), self._logo.height()
-            # optional: scale logo if window small
-            max_w = int(self.width() * 0.45)
+            max_w = int(self.width() * 0.75)
             if lw > max_w:
                 scale = max_w / lw
             w = int(lw * scale)
             h = int(lh * scale)
+
+            # cache the scaled pixmap so we don't resample every paint
+            if getattr(self, "_scaled_logo_size", None) != (w, h):
+                self._scaled_logo = self._logo.scaled(
+                    w, h,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                self._scaled_logo_size = (w, h)
+
             x = (self.width() - w) // 2
             y = (self.height() - h) // 2 - 100
-            target = QtCore.QRect(x, y, w, h)
-            p.setOpacity(0.95)
-            p.drawPixmap(target, self._logo)
-            p.setOpacity(1.0)
+            p.drawPixmap(x, y, self._scaled_logo)
+
 
         # Title (optional)
-        title = "AQUILA — Auto QUantification of Images Learning Algorithm"
+        title = "Auto QUantification of Images Learning Algorithm"
         font = QtGui.QFont(self.font())
         font.setPointSize(18)
         font.setBold(True)
@@ -175,7 +301,7 @@ class MenuScreen(QtWidgets.QWidget):
         p.setPen(QtGui.QColor(220, 220, 220))
         metrics = QtGui.QFontMetrics(font)
         tw = metrics.horizontalAdvance(title)
-        p.drawText((self.width()-tw)//2, (self.height()//2)+20, title)
+        p.drawText((self.width()-tw)//2, (self.height()//2)+50, title)
 
 # --------------
 # Main App Class
@@ -189,8 +315,21 @@ class App(QtWidgets.QMainWindow):
 
         if icon_path:
             qicon = QtGui.QIcon(icon_path)
-        if not qicon.isNull():
-            self.setWindowIcon(qicon)
+
+        if sys.platform.startswith("win"): # For Windows icon loading
+            if not qicon.isNull():
+                self.setWindowIcon(qicon)
+        elif sys.platform == "darwin" and icon_path: # For macOS icon loading
+            # Note: requires PyObjC to be installed in the Python environment
+            try:
+                from AppKit import NSApplication, NSImage
+                img = NSImage.alloc().initWithContentsOfFile_(str(icon_path))
+                if img:
+                    NSApplication.sharedApplication().setApplicationIconImage_(img)
+            except Exception:
+                # PyObjC not installed or icon load failed; ignore
+                pass
+
 
         self.stack = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -221,8 +360,10 @@ class App(QtWidgets.QMainWindow):
 def main():
     app = QtWidgets.QApplication(sys.argv)
 
-    logo = r".\assets\aquila_full_resized.png"
-    icon = r".\assets\aquila_logo.ico"
+    # logo = r".\assets\aquila_full.png"
+    logo = r"./assets/aquila_full.png"
+    # icon = r".\assets\aquila_logo.ico"
+    icon = r"./assets/aquila_logo.ico"
 
     win = App(logo_path=logo, icon_path=icon)
     win.show()
