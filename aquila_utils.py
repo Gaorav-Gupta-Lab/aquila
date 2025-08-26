@@ -543,8 +543,22 @@ class AquilaWindow(QtWidgets.QWidget):
         # ------------------
         btn_layout = QtWidgets.QHBoxLayout()
         self.btn_run = QtWidgets.QPushButton("▶ Run Analysis")
+        self.btn_run.setStyleSheet("""
+            font-size: 16pt;
+            border: 1px solid white;
+        """)
+        self.btn_run.setMinimumHeight(40)
+        self.btn_run.setMinimumWidth(180)
+
         self.btn_stop = QtWidgets.QPushButton("■ Stop")
+        self.btn_stop.setStyleSheet("""
+            font-size: 16pt;
+            border: 1px solid white;
+        """)
+        self.btn_stop.setMinimumHeight(40)
+        self.btn_stop.setMinimumWidth(180)
         self.btn_stop.setEnabled(False)
+
         self.btn_run.clicked.connect(self._start)
         self.btn_stop.clicked.connect(self._stop)
 
@@ -674,7 +688,6 @@ class AquilaWindow(QtWidgets.QWidget):
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.status.setText("Idle.")
-
 
     def _log(self, msg: str):
         self.log_box.appendPlainText(msg)

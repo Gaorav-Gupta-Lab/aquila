@@ -10,7 +10,7 @@ from aquila_utils import AquilaWindow
 # ----------------------------------------
 
 class Particle:
-    def __init__(self, rect: QtCore.QRectF):
+    def __init__(self, rect: QtCore.QRectF, max_alpha=245):
         self.bounds = rect
         self.pos = QtCore.QPointF(
             random.uniform(rect.left()+5, rect.right()-5),
@@ -22,7 +22,8 @@ class Particle:
         )
         self.radius = random.uniform(2.0, 3.5)
         self.maxd = 150.0
-        self.alpha = random.randint(15, 245)
+        self.max_alpha = max_alpha
+        self.alpha = random.randint(15, max_alpha)
         self.alpha_multiplier = random.choice([-1, 1])
 
     def update(self):
@@ -39,10 +40,11 @@ class Particle:
         if p.y() < b.top()+5 or p.y() > b.bottom()-5:
             self.vel.setY(-self.vel.y())
 
+        # "flickering" effect
         self.alpha += 1 * self.alpha_multiplier
         if self.alpha < 10:
             self.alpha_multiplier *= -1
-        if self.alpha > 250:
+        if self.alpha > self.max_alpha:
             self.alpha_multiplier *= -1
 
     def draw(self, painter: QtGui.QPainter, mouse: QtCore.QPointF):
@@ -130,7 +132,7 @@ class MenuScreen(QtWidgets.QWidget):
             /* keyboard focus ring (accessible) */
             QPushButton:focus {
                 outline: none;
-                border: 2px solid #9CC8FF;     /* light blue ring */
+                border: none;     /* light blue ring */
             }
             """)
 
@@ -165,7 +167,7 @@ class MenuScreen(QtWidgets.QWidget):
             /* focus ring */
             QPushButton:focus {
                 outline: none;
-                border-color: #8ED08A;     /* accessible ring */
+                border-color: none;     /* accessible ring */
             }
             """)
 
@@ -201,7 +203,7 @@ class MenuScreen(QtWidgets.QWidget):
             /* focus ring */
             QPushButton:focus {
                 outline: none;
-                border: 2px solid #F3B1AF;   /* soft red ring */
+                border: none;   /* soft red ring */
             }
             """)
 
@@ -260,8 +262,13 @@ class MenuScreen(QtWidgets.QWidget):
 
         # Background gradient
         grad = QtGui.QLinearGradient(0, 0, 0, self.height())
-        grad.setColorAt(0.0, QtGui.QColor(18, 18, 18))
-        grad.setColorAt(1.0, QtGui.QColor(32, 32, 32))
+
+        black_col = QtGui.QColor(15, 15, 15)
+        gray_col = QtGui.QColor(35, 35, 35)
+
+        grad.setColorAt(0.0, black_col)
+        grad.setColorAt(0.75, black_col)
+        grad.setColorAt(1.0, gray_col)
         p.fillRect(self.rect(), QtGui.QBrush(grad))
 
         # Draw particles
@@ -272,13 +279,13 @@ class MenuScreen(QtWidgets.QWidget):
         if not self._logo.isNull():
             scale = 1.0
             lw, lh = self._logo.width(), self._logo.height()
-            max_w = int(self.width() * 0.75)
+            max_w = int(self.width() * 0.8)
             if lw > max_w:
                 scale = max_w / lw
             w = int(lw * scale)
             h = int(lh * scale)
 
-            # cache the scaled pixmap so we don't resample every paint
+            # cache the scaled pixmap so it's not resampled every paint
             if getattr(self, "_scaled_logo_size", None) != (w, h):
                 self._scaled_logo = self._logo.scaled(
                     w, h,
@@ -292,16 +299,15 @@ class MenuScreen(QtWidgets.QWidget):
             p.drawPixmap(x, y, self._scaled_logo)
 
 
-        # Title (optional)
-        title = "Auto QUantification of Images Learning Algorithm"
-        font = QtGui.QFont(self.font())
-        font.setPointSize(18)
-        font.setBold(True)
-        p.setFont(font)
-        p.setPen(QtGui.QColor(220, 220, 220))
-        metrics = QtGui.QFontMetrics(font)
-        tw = metrics.horizontalAdvance(title)
-        p.drawText((self.width()-tw)//2, (self.height()//2)+50, title)
+        # title = "Auto QUantification of Images Learning Algorithm"
+        # font = QtGui.QFont(self.font())
+        # font.setPointSize(18)
+        # font.setBold(True)
+        # p.setFont(font)
+        # p.setPen(QtGui.QColor(220, 220, 220))
+        # metrics = QtGui.QFontMetrics(font)
+        # tw = metrics.horizontalAdvance(title)
+        # p.drawText((self.width()-tw)//2, (self.height()//2)+50, title)
 
 # --------------
 # Main App Class
@@ -319,7 +325,7 @@ class App(QtWidgets.QMainWindow):
         if sys.platform.startswith("win"): # For Windows icon loading
             if not qicon.isNull():
                 self.setWindowIcon(qicon)
-        elif sys.platform == "darwin" and icon_path: # For macOS icon loading
+        elif sys.platform.startswith("darwin") and icon_path: # For macOS icon loading
             # Note: requires PyObjC to be installed in the Python environment
             try:
                 from AppKit import NSApplication, NSImage
@@ -348,6 +354,14 @@ class App(QtWidgets.QMainWindow):
         # Optional: menu bar or status bar
         self.statusBar().showMessage("Status: READY - Let's get cooking...")
 
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(50)  # Higher = lower FPS = slower particles
+
+        self._particles = []
+        self.setMouseTracking(True)
+        self._mouse = QtCore.QPointF(-1000, -1000)
+
     def _go_run(self):
         # Jump straight to the parameters window (or trigger a default run)
         self.stack.setCurrentWidget(self.params)
@@ -356,14 +370,41 @@ class App(QtWidgets.QMainWindow):
         # If you separate a settings screen, push that here
         self.stack.setCurrentWidget(self.params)
 
+    def _tick(self):
+        for p in self._particles:
+            p.update()
+        self.update()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._generate_particles()
+
+    def mouseMoveEvent(self, e: QtGui.QMouseEvent):
+        self._mouse = QtCore.QPointF(e.position())
+        super().mouseMoveEvent(e)
+
+    def _generate_particles(self):
+        # Keep a moderate amount for performance
+        count = 250
+        rect = QtCore.QRectF(0, 0, self.width(), self.height())
+        self._particles = [Particle(rect, max_alpha=100) for _ in range(count)]
+
+    def paintEvent(self, event):
+        p = QtGui.QPainter(self)
+        for part in self._particles:
+            part.draw(p, self._mouse)
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
 
-    # logo = r".\assets\aquila_full.png"
-    logo = r"./assets/aquila_full.png"
-    # icon = r".\assets\aquila_logo.ico"
-    icon = r"./assets/aquila_logo.ico"
+    # Parent directory of this script
+    base_dir = Path(__file__).resolve().parent
+
+    # Assets are in the 'assets' folder within the parent directory
+    assets_dir = base_dir / "assets"
+    logo = str(assets_dir / "aquila_full.png")
+    icon = str(assets_dir / "aquila_logo.ico")
 
     win = App(logo_path=logo, icon_path=icon)
     win.show()
