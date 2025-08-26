@@ -328,12 +328,16 @@ class App(QtWidgets.QMainWindow):
         elif sys.platform.startswith("darwin") and icon_path: # For macOS icon loading
             # Note: requires PyObjC to be installed in the Python environment
             try:
-                from AppKit import NSApplication, NSImage
+                import importlib
+                AppKit = importlib.import_module("AppKit")
+                NSApplication = AppKit.NSApplication
+                NSImage = AppKit.NSImage
                 img = NSImage.alloc().initWithContentsOfFile_(str(icon_path))
                 if img:
                     NSApplication.sharedApplication().setApplicationIconImage_(img)
             except Exception:
                 # PyObjC not installed or icon load failed; ignore
+                print("Warning: Could not set application icon on macOS. Ensure PyObjC is installed.")
                 pass
 
 
