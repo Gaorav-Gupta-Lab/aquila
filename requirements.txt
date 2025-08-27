@@ -1,10 +1,12 @@
 numpy
 pandas
+opencv-python
 tifffile
 Pillow
-pyobjc (only for macOS, optional)
 PySide6
 scikit-image
 scipy
 matplotlib
 seaborn
+# Optional, only for macOS:
+pyobjc
