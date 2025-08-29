@@ -1,6 +1,7 @@
 import shutil
 import warnings
 from pathlib import Path
+import re
 
 warnings.filterwarnings("ignore", category=UserWarning, module="tifffile")
 
@@ -54,6 +55,24 @@ def robust_read_image(img_path: Path):
 def truncate_name(name: str, token: str = "Top") -> str:
     idx = name.find(token)
     return name[:idx] if idx >= 0 else name
+
+def find_group(sample_name: str, group_names: list[str]) -> str | None:
+    # Normalize sample name (lowercase for case-insensitivity)
+    name = sample_name.lower()
+    groups = [g.lower() for g in group_names]
+
+    # 1. First try to match by exact token (split sample_name into words/numbers)
+    tokens = re.findall(r"[A-Za-z0-9\+\-_]+", name)
+    for token in tokens:
+        if token in groups:
+            return group_names[groups.index(token)]
+
+    # 2. If no token match, try embedded search
+    for g in groups:
+        if g in name:
+            return group_names[groups.index(g)]
+
+    return None
 
 def difference_of_gaussians_uint8_like(img_uint8: np.ndarray, sigmaA: float, sigmaB: float):
     """Return DoG as float (≈0..255 after shift), WITHOUT rescaling to uint16 for computation."""
@@ -184,8 +203,10 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
     file_name = img_path.name
     sample_name = truncate_name(file_name, "Top")
 
-    sample_group = re.search(r"\(([^)]+)\)", sample_name)
-    sample_group = sample_group.group(1) if sample_group else None
+    group_name = find_group(sample_name, params.sample_groups)
+
+    # group_name = re.search(r"\(([^)]+)\)", sample_name)
+    # group_name = group_name.group(1) if group_name else None
 
     if output_dir:
         dest_dir = output_dir / sample_name
@@ -237,8 +258,8 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
 
     df_nuclei.insert(0, "sample_name", sample_name)
     df_points.insert(0, "sample_name", sample_name)
-    df_nuclei.insert(1, "sample_group", sample_group)
-    df_points.insert(1, "sample_group", sample_group)
+    df_nuclei.insert(1, "sample_group", group_name)
+    df_points.insert(1, "sample_group", group_name)
 
     df_nuclei.to_csv(results_csv, index=False)
     df_points.to_csv(points_csv, index=False)

@@ -43,10 +43,10 @@ class App(QtWidgets.QMainWindow):
         self.setCentralWidget(self.stack)
 
         self.menu = MenuScreen(logo_path=logo_path)
-        self.params = AquilaWindow()
+        self.main_app = AquilaWindow()
 
         self.stack.addWidget(self.menu)    # index 0
-        self.stack.addWidget(self.params)  # index 1
+        self.stack.addWidget(self.main_app)  # index 1
 
         # Wire menu actions
         self.menu.startRequested.connect(self._go_run)
@@ -66,11 +66,12 @@ class App(QtWidgets.QMainWindow):
 
     def _go_run(self):
         # Jump straight to the parameters window (or trigger a default run)
-        self.stack.setCurrentWidget(self.params)
+        self.stack.setCurrentWidget(self.main_app)
 
     def _go_settings(self):
         # If you separate a settings screen, push that here
-        self.stack.setCurrentWidget(self.params)
+        return
+        self.stack.setCurrentWidget(self.settings)
 
     def _tick(self):
         for p in self._particles:

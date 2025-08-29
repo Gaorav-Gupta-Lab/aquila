@@ -9,6 +9,7 @@ from aquila_utils import process_image_file, plot_results
 class AquilaParams:
     input_dir: str
     output_dir: str
+    sample_groups: str
     sigmaA: float
     sigmaB: float
     prominence: float
@@ -62,7 +63,7 @@ class Worker(QtCore.QObject):
             summary_dir = Path(self.params.output_dir) / "Summary"
             summary_dir.mkdir(exist_ok=True)
             combined.to_csv(summary_dir / "all_results_summary.csv", index=False)
-            plot_path = plot_results(combined, summary_dir, order=['v3KO', 'HPQ-', 'HPQ+'])
+            plot_path = plot_results(combined, summary_dir, order=self.params.sample_groups)
             if plot_path:
                 self.log.emit(f"[OK] Wrote violin summary → {plot_path.name}")
         self.finished.emit()
@@ -83,6 +84,7 @@ class AquilaWindow(QtWidgets.QWidget):
         dir_layout = QtWidgets.QFormLayout(dir_group)
 
         self.in_edit = QtWidgets.QLineEdit()
+        self.in_edit.setPlaceholderText("Enter directory where images are stored")
         btn_in = QtWidgets.QPushButton("Browse…")
         btn_in.clicked.connect(self._browse_input)
         in_row = QtWidgets.QHBoxLayout()
@@ -91,6 +93,7 @@ class AquilaWindow(QtWidgets.QWidget):
         dir_layout.addRow("Input directory:", in_row)
 
         self.out_edit = QtWidgets.QLineEdit()
+        self.out_edit.setPlaceholderText("Enter results directory (blank will save results to input directory)")
         btn_out = QtWidgets.QPushButton("Browse…")
         btn_out.clicked.connect(self._browse_output)
         out_row = QtWidgets.QHBoxLayout()
@@ -115,6 +118,18 @@ class AquilaWindow(QtWidgets.QWidget):
         detect_layout.addWidget(QtWidgets.QLabel("Prominence:"), 0, 4); detect_layout.addWidget(self.prominence, 0, 5)
 
         main_layout.addWidget(detect_group)
+
+        #------------------
+        # Group Assignments
+        # -----------------
+        sample_group = QtWidgets.QGroupBox("Sample Groups")
+        sample_layout = QtWidgets.QVBoxLayout(sample_group)
+
+        self.sample_groups = QtWidgets.QLineEdit()
+        self.sample_groups.setPlaceholderText("Enter sample names separated by commas")
+        sample_layout.addWidget(self.sample_groups)
+
+        main_layout.addWidget(sample_group)
 
         # --------------------------
         # Nucleus Segmentation Group
@@ -254,6 +269,7 @@ class AquilaWindow(QtWidgets.QWidget):
         return AquilaParams(
             input_dir=input_dir,
             output_dir=output_dir,
+            sample_groups=[g.strip() for g in self.sample_groups.text().strip().split(",")],
             sigmaA=self.sigmaA.value(),
             sigmaB=self.sigmaB.value(),
             prominence=self.prominence.value(),
