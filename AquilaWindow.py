@@ -93,7 +93,7 @@ class AquilaWindow(QtWidgets.QWidget):
         dir_layout.addRow("Input directory:", in_row)
 
         self.out_edit = QtWidgets.QLineEdit()
-        self.out_edit.setPlaceholderText("Enter results directory (blank will save results to input directory)")
+        self.out_edit.setPlaceholderText("Enter results directory (leaving this blank will save results to input directory)")
         btn_out = QtWidgets.QPushButton("Browse…")
         btn_out.clicked.connect(self._browse_output)
         out_row = QtWidgets.QHBoxLayout()
@@ -113,23 +113,103 @@ class AquilaWindow(QtWidgets.QWidget):
         self.sigmaB = QtWidgets.QDoubleSpinBox(); self.sigmaB.setRange(0.1, 50.0); self.sigmaB.setValue(8.0)
         self.prominence = QtWidgets.QDoubleSpinBox(); self.prominence.setRange(0.0, 5000.0); self.prominence.setValue(35.0)
 
-        detect_layout.addWidget(QtWidgets.QLabel("Sigma A (DoG):"), 0, 0); detect_layout.addWidget(self.sigmaA, 0, 1)
-        detect_layout.addWidget(QtWidgets.QLabel("Sigma B (DoG):"), 0, 2); detect_layout.addWidget(self.sigmaB, 0, 3)
-        detect_layout.addWidget(QtWidgets.QLabel("Prominence:"), 0, 4); detect_layout.addWidget(self.prominence, 0, 5)
+        label_sigmaA = QtWidgets.QLabel("Sigma A (DoG):")
+        label_sigmaA.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        detect_layout.addWidget(label_sigmaA, 0, 0); detect_layout.addWidget(self.sigmaA, 0, 1)
+        label_sigmaB = QtWidgets.QLabel("Sigma B (DoG):")
+        label_sigmaB.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        detect_layout.addWidget(label_sigmaB, 0, 2); detect_layout.addWidget(self.sigmaB, 0, 3)
+        label_prominence = QtWidgets.QLabel("Prominence:")
+        label_prominence.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        detect_layout.addWidget(label_prominence, 0, 4); detect_layout.addWidget(self.prominence, 0, 5)
 
         main_layout.addWidget(detect_group)
 
-        #------------------
-        # Group Assignments
-        # -----------------
-        sample_group = QtWidgets.QGroupBox("Sample Groups")
-        sample_layout = QtWidgets.QVBoxLayout(sample_group)
 
-        self.sample_groups = QtWidgets.QLineEdit()
-        self.sample_groups.setPlaceholderText("Enter sample names separated by commas")
-        sample_layout.addWidget(self.sample_groups)
+        # ------------------
+        # Sample Groups & Channels
+        # ------------------
+        groups_box = QtWidgets.QGroupBox("Sample Groups and Channels")
+        grid = QtWidgets.QGridLayout(groups_box)   # parented; no need to call setLayout()
 
-        main_layout.addWidget(sample_group)
+        # Sample groups row
+        lbl_groups = QtWidgets.QLabel("Sample group names:")
+        self.groups = QtWidgets.QLineEdit()
+        lbl_groups.setBuddy(self.groups)
+        self.groups.setPlaceholderText("Enter group names separated by commas")
+        self.groups.setClearButtonEnabled(True)
+
+        # Put label in col 0, line edit spans cols 1..4
+        grid.addWidget(lbl_groups, 0, 0)
+        grid.addWidget(self.groups, 0, 1, 1, 4)
+
+        # Channels (built via loop)
+        self.channel_combos = []
+        channel_items = ["None", "DAPI", "TexasRed", "Cy5", "GFP"]
+
+        for i in range(5):
+            lbl = QtWidgets.QLabel(f"Channel {i+1}:")
+            cmb = QtWidgets.QComboBox()
+            cmb.addItems(channel_items)
+
+            # Default channels for testing, change upon release
+            if i == 0:
+                cmb.setCurrentText("DAPI")
+            if i == 1:
+                cmb.setCurrentText("TexasRed")
+
+            cmb.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # keep compact
+            # Labels on row 1 (cols 2..4), combos on row 2 (cols 2..4)
+            col = 2 + i
+            grid.addWidget(lbl, 1, col)
+            grid.addWidget(cmb, 2, col)
+            self.channel_combos.append(cmb)
+
+        # Layout behavior & spacing
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(6)
+        grid.setContentsMargins(10, 10, 10, 10)
+
+        # Make the groups QLineEdit expand; keep channel columns snug
+        grid.setColumnStretch(0, 0)   # label
+        grid.setColumnStretch(1, 1)   # expanding field
+        grid.setColumnStretch(2, 0)
+        grid.setColumnStretch(3, 0)
+        grid.setColumnStretch(4, 0)
+
+        # Add the group to your window's main layout
+        main_layout.addWidget(groups_box)
+
+        # # ------------------
+        # # Group Assignments
+        # # ------------------
+        # groups_group = QtWidgets.QGroupBox("Sample Groups and Channels")
+        # groups_layout = QtWidgets.QGridLayout(groups_group)
+
+        # # Set layout explicitly
+        # groups_group.setLayout(groups_layout)
+
+        # self.groups = QtWidgets.QLineEdit()
+        # self.groups.setPlaceholderText("Enter group names separated by commas")
+        # groups_layout.addWidget(QtWidgets.QLabel("Sample Group Names:"), 0, 0, 1, 2); groups_layout.addWidget(self.groups, 1, 0, 1, 2)
+
+        # groups_layout.addWidget(QtWidgets.QLabel("Channel 1:"), 0, 2)
+        # self.channels = QtWidgets.QComboBox()
+        # self.channels.addItems(["None", "DAPI", "Foci"])
+        # groups_layout.addWidget(self.channels, 1, 2)
+
+        # groups_layout.addWidget(QtWidgets.QLabel("Channel 2:"), 0, 3)
+        # self.channels2 = QtWidgets.QComboBox()
+        # self.channels2.addItems(["None", "DAPI", "Foci"])
+        # groups_layout.addWidget(self.channels2, 1, 3)
+
+        # groups_layout.addWidget(QtWidgets.QLabel("Channel 3:"), 0, 4)
+        # self.channels3 = QtWidgets.QComboBox()
+        # self.channels3.addItems(["None", "DAPI", "Foci"])
+        # groups_layout.addWidget(self.channels3, 1, 4)
+
+        # # Add the *group box* (container) to the main layout
+        # main_layout.addWidget(groups_group)
 
         # --------------------------
         # Nucleus Segmentation Group
@@ -160,6 +240,7 @@ class AquilaWindow(QtWidgets.QWidget):
         self.maxima_sigma = QtWidgets.QDoubleSpinBox(); self.maxima_sigma.setRange(0.0, 10.0); self.maxima_sigma.setValue(1.0)
         self.min_dist = QtWidgets.QSpinBox(); self.min_dist.setRange(1, 50); self.min_dist.setValue(1)
         self.exts = QtWidgets.QLineEdit(".tif,.tiff,.png,.jpg,.jpeg")
+        self.exts.setClearButtonEnabled(True)
         self.copy_original = QtWidgets.QCheckBox("Copy original images into output folder"); self.copy_original.setChecked(True)
 
         adv_layout.addWidget(QtWidgets.QLabel("Maxima smooth σ:"), 0, 0); adv_layout.addWidget(self.maxima_sigma, 0, 1)
