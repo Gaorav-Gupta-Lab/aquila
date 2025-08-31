@@ -10,6 +10,7 @@ class AquilaParams:
     input_dir: str
     output_dir: str
     sample_groups: str
+    channels: list[str] | None
     sigmaA: float
     sigmaB: float
     prominence: float
@@ -130,21 +131,21 @@ class AquilaWindow(QtWidgets.QWidget):
         # Sample Groups & Channels
         # ------------------
         groups_box = QtWidgets.QGroupBox("Sample Groups and Channels")
-        grid = QtWidgets.QGridLayout(groups_box)   # parented; no need to call setLayout()
+        groups_grid = QtWidgets.QGridLayout(groups_box)   # parented; no need to call setLayout()
 
         # Sample groups row
         lbl_groups = QtWidgets.QLabel("Sample group names:")
-        self.groups = QtWidgets.QLineEdit()
-        lbl_groups.setBuddy(self.groups)
-        self.groups.setPlaceholderText("Enter group names separated by commas")
-        self.groups.setClearButtonEnabled(True)
+        self.sample_groups = QtWidgets.QLineEdit()
+        lbl_groups.setBuddy(self.sample_groups)
+        self.sample_groups.setPlaceholderText("Enter group names separated by commas")
+        self.sample_groups.setClearButtonEnabled(True)
 
-        # Put label in col 0, line edit spans cols 1..4
-        grid.addWidget(lbl_groups, 0, 0)
-        grid.addWidget(self.groups, 0, 1, 1, 4)
+        # Put label in col 0, line edit spans all cols
+        groups_grid.addWidget(lbl_groups, 0, 0)
+        groups_grid.addWidget(self.sample_groups, 0, 1, 1, -1)
 
         # Channels (built via loop)
-        self.channel_combos = []
+        self.channels = []
         channel_items = ["None", "DAPI", "TexasRed", "Cy5", "GFP"]
 
         for i in range(5):
@@ -161,55 +162,24 @@ class AquilaWindow(QtWidgets.QWidget):
             cmb.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # keep compact
             # Labels on row 1 (cols 2..4), combos on row 2 (cols 2..4)
             col = 2 + i
-            grid.addWidget(lbl, 1, col)
-            grid.addWidget(cmb, 2, col)
-            self.channel_combos.append(cmb)
+            groups_grid.addWidget(lbl, 1, col)
+            groups_grid.addWidget(cmb, 2, col)
+            self.channels.append(cmb)
 
         # Layout behavior & spacing
-        grid.setHorizontalSpacing(12)
-        grid.setVerticalSpacing(6)
-        grid.setContentsMargins(10, 10, 10, 10)
+        groups_grid.setHorizontalSpacing(12)
+        groups_grid.setVerticalSpacing(6)
+        groups_grid.setContentsMargins(10, 10, 10, 10)
 
-        # Make the groups QLineEdit expand; keep channel columns snug
-        grid.setColumnStretch(0, 0)   # label
-        grid.setColumnStretch(1, 1)   # expanding field
-        grid.setColumnStretch(2, 0)
-        grid.setColumnStretch(3, 0)
-        grid.setColumnStretch(4, 0)
+        # # Make the groups QLineEdit expand; keep channel columns snug
+        groups_grid.setColumnStretch(0, 0)   # label
+        groups_grid.setColumnStretch(1, 1)   # expanding field
+        groups_grid.setColumnStretch(2, 0)
+        groups_grid.setColumnStretch(3, 0)
+        groups_grid.setColumnStretch(4, 0)
 
         # Add the group to your window's main layout
         main_layout.addWidget(groups_box)
-
-        # # ------------------
-        # # Group Assignments
-        # # ------------------
-        # groups_group = QtWidgets.QGroupBox("Sample Groups and Channels")
-        # groups_layout = QtWidgets.QGridLayout(groups_group)
-
-        # # Set layout explicitly
-        # groups_group.setLayout(groups_layout)
-
-        # self.groups = QtWidgets.QLineEdit()
-        # self.groups.setPlaceholderText("Enter group names separated by commas")
-        # groups_layout.addWidget(QtWidgets.QLabel("Sample Group Names:"), 0, 0, 1, 2); groups_layout.addWidget(self.groups, 1, 0, 1, 2)
-
-        # groups_layout.addWidget(QtWidgets.QLabel("Channel 1:"), 0, 2)
-        # self.channels = QtWidgets.QComboBox()
-        # self.channels.addItems(["None", "DAPI", "Foci"])
-        # groups_layout.addWidget(self.channels, 1, 2)
-
-        # groups_layout.addWidget(QtWidgets.QLabel("Channel 2:"), 0, 3)
-        # self.channels2 = QtWidgets.QComboBox()
-        # self.channels2.addItems(["None", "DAPI", "Foci"])
-        # groups_layout.addWidget(self.channels2, 1, 3)
-
-        # groups_layout.addWidget(QtWidgets.QLabel("Channel 3:"), 0, 4)
-        # self.channels3 = QtWidgets.QComboBox()
-        # self.channels3.addItems(["None", "DAPI", "Foci"])
-        # groups_layout.addWidget(self.channels3, 1, 4)
-
-        # # Add the *group box* (container) to the main layout
-        # main_layout.addWidget(groups_group)
 
         # --------------------------
         # Nucleus Segmentation Group
@@ -223,11 +193,22 @@ class AquilaWindow(QtWidgets.QWidget):
         self.blur_sigma = QtWidgets.QDoubleSpinBox(); self.blur_sigma.setRange(0.0, 10.0); self.blur_sigma.setValue(1.8)
         self.seed_radius = QtWidgets.QSpinBox(); self.seed_radius.setRange(1, 50); self.seed_radius.setValue(3)
 
-        seg_layout.addWidget(QtWidgets.QLabel("Min area (px):"), 0, 0); seg_layout.addWidget(self.min_area, 0, 1)
-        seg_layout.addWidget(QtWidgets.QLabel("Max area (px):"), 0, 2); seg_layout.addWidget(self.max_area, 0, 3)
-        seg_layout.addWidget(QtWidgets.QLabel("DAPI foreground:"), 1, 0); seg_layout.addWidget(self.foreground, 1, 1)
-        seg_layout.addWidget(QtWidgets.QLabel("Blur σ:"), 1, 2); seg_layout.addWidget(self.blur_sigma, 1, 3)
-        seg_layout.addWidget(QtWidgets.QLabel("Seed radius:"), 1, 4); seg_layout.addWidget(self.seed_radius, 1, 5)
+        label_min_area = QtWidgets.QLabel("Min area (px):")
+        label_min_area.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        seg_layout.addWidget(label_min_area, 0, 0); seg_layout.addWidget(self.min_area, 0, 1)
+        label_max_area = QtWidgets.QLabel("Max area (px):")
+        label_max_area.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        seg_layout.addWidget(label_max_area, 0, 2); seg_layout.addWidget(self.max_area, 0, 3)
+
+        label_foreground = QtWidgets.QLabel("DAPI foreground:")
+        label_foreground.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        seg_layout.addWidget(label_foreground, 1, 0); seg_layout.addWidget(self.foreground, 1, 1)
+        label_blur_sigma = QtWidgets.QLabel("Blur σ:")
+        label_blur_sigma.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        seg_layout.addWidget(label_blur_sigma, 1, 2); seg_layout.addWidget(self.blur_sigma, 1, 3)
+        label_seed_radius = QtWidgets.QLabel("Seed radius:")
+        label_seed_radius.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        seg_layout.addWidget(label_seed_radius, 1, 4); seg_layout.addWidget(self.seed_radius, 1, 5)
 
         main_layout.addWidget(seg_group)
 
@@ -340,6 +321,9 @@ class AquilaWindow(QtWidgets.QWidget):
         if d:
             self.out_edit.setText(d)
 
+    # ------------------------------------------------
+    # Stored parameter list to access outside of class
+    # ------------------------------------------------
     def _params(self) -> AquilaParams:
         input_dir=self.in_edit.text().strip()
         output_dir=self.out_edit.text().strip()
@@ -351,6 +335,10 @@ class AquilaWindow(QtWidgets.QWidget):
             input_dir=input_dir,
             output_dir=output_dir,
             sample_groups=[g.strip() for g in self.sample_groups.text().strip().split(",")],
+            channels = [
+                c.currentText() if c.currentText() != 'None' else None 
+                for c in self.channels
+            ] if self.channels else None,
             sigmaA=self.sigmaA.value(),
             sigmaB=self.sigmaB.value(),
             prominence=self.prominence.value(),
@@ -366,6 +354,9 @@ class AquilaWindow(QtWidgets.QWidget):
         )
 
 
+    # -----------------------
+    # Upon "RUN" Button press
+    # -----------------------
     def _start(self):
         params = self._params()
         if not Path(params.input_dir).is_dir():
@@ -376,6 +367,9 @@ class AquilaWindow(QtWidgets.QWidget):
         self.btn_run.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.status.setText("Running…")
+
+        print(params.channels)
+        print(params.sample_groups)
 
         self.thread = QtCore.QThread()
         self.worker = Worker(params)
@@ -392,11 +386,17 @@ class AquilaWindow(QtWidgets.QWidget):
 
         self.thread.start()
 
+    # ------------------------
+    # Upon "STOP" Button press
+    # ------------------------
     def _stop(self):
         if hasattr(self, "worker") and self.worker:
             self.worker.stop()
             self.status.setText("Stopping…")
 
+    # -----------------------------
+    # Executes after successful run
+    # -----------------------------
     def _finish_run(self):
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)
