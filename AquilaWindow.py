@@ -24,6 +24,7 @@ class AquilaParams:
     extensions: str
     copy_original: bool
 
+
 class Worker(QtCore.QObject):
     finished = QtCore.Signal()
     log = QtCore.Signal(str)
@@ -32,6 +33,7 @@ class Worker(QtCore.QObject):
         super().__init__()
         self.params = params
         self._stop_flag = False
+
 
     def stop(self):
         self._stop_flag = True
@@ -66,8 +68,9 @@ class Worker(QtCore.QObject):
             combined.to_csv(summary_dir / "all_results_summary.csv", index=False)
             plot_path = plot_results(combined, summary_dir, order=self.params.sample_groups)
             if plot_path:
-                self.log.emit(f"[OK] Wrote violin summary → {plot_path.name}")
+                self.log.emit(f"[OK] Wrote violin summary → {plot_path}")
         self.finished.emit()
+
 
 class AquilaWindow(QtWidgets.QWidget):
     def __init__(self):
@@ -146,25 +149,55 @@ class AquilaWindow(QtWidgets.QWidget):
 
         # Channels (built via loop)
         self.channels = []
-        channel_items = ["None", "DAPI", "TexasRed", "Cy5", "GFP"]
+        channel_items = ["None", "DAPI", "Texas Red", "Cy5", "GFP"]
 
-        for i in range(5):
-            lbl = QtWidgets.QLabel(f"Channel {i+1}:")
-            cmb = QtWidgets.QComboBox()
-            cmb.addItems(channel_items)
+        red_channel_label = QtWidgets.QLabel(f"Red Channel")
+        green_channel_label = QtWidgets.QLabel(f"Green Channel")
+        blue_channel_label = QtWidgets.QLabel(f"Blue Channel")
 
-            # Default channels for testing, change upon release
-            if i == 0:
-                cmb.setCurrentText("DAPI")
-            if i == 1:
-                cmb.setCurrentText("TexasRed")
+        red_channel_box = QtWidgets.QComboBox()
+        green_channel_box = QtWidgets.QComboBox()
+        blue_channel_box = QtWidgets.QComboBox()
 
-            cmb.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # keep compact
-            # Labels on row 1 (cols 2..4), combos on row 2 (cols 2..4)
-            col = 2 + i
-            groups_grid.addWidget(lbl, 1, col)
-            groups_grid.addWidget(cmb, 2, col)
-            self.channels.append(cmb)
+        red_channel_box.addItems(channel_items)
+        green_channel_box.addItems(channel_items)
+        blue_channel_box.addItems(channel_items)
+
+        red_channel_box.setCurrentText("Texas Red")
+        blue_channel_box.setCurrentText("DAPI")
+
+        red_channel_box.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+        green_channel_box.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+        blue_channel_box.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+
+        groups_grid.addWidget(red_channel_label, 1, 3)
+        groups_grid.addWidget(red_channel_box, 2, 3)
+        groups_grid.addWidget(green_channel_label, 1, 4)
+        groups_grid.addWidget(green_channel_box, 2, 4)
+        groups_grid.addWidget(blue_channel_label, 1, 5)
+        groups_grid.addWidget(blue_channel_box, 2, 5)
+
+        self.channels.append(red_channel_box)
+        self.channels.append(green_channel_box)
+        self.channels.append(blue_channel_box)
+
+        # for i in range(5):
+        #     lbl = QtWidgets.QLabel(f"Channel {i+1}:")
+        #     cmb = QtWidgets.QComboBox()
+        #     cmb.addItems(channel_items)
+
+        #     # Default channels for testing, change upon release
+        #     if i == 0:
+        #         cmb.setCurrentText("DAPI")
+        #     if i == 1:
+        #         cmb.setCurrentText("TexasRed")
+
+        #     cmb.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # keep compact
+        #     # Labels on row 1 (cols 2..4), combos on row 2 (cols 2..4)
+        #     col = 2 + i
+        #     groups_grid.addWidget(lbl, 1, col)
+        #     groups_grid.addWidget(cmb, 2, col)
+        #     self.channels.append(cmb)
 
         # Layout behavior & spacing
         groups_grid.setHorizontalSpacing(12)
@@ -172,11 +205,11 @@ class AquilaWindow(QtWidgets.QWidget):
         groups_grid.setContentsMargins(10, 10, 10, 10)
 
         # # Make the groups QLineEdit expand; keep channel columns snug
-        groups_grid.setColumnStretch(0, 0)   # label
-        groups_grid.setColumnStretch(1, 1)   # expanding field
-        groups_grid.setColumnStretch(2, 0)
-        groups_grid.setColumnStretch(3, 0)
-        groups_grid.setColumnStretch(4, 0)
+        # groups_grid.setColumnStretch(0, 0)   # label
+        # groups_grid.setColumnStretch(1, 1)   # expanding field
+        # groups_grid.setColumnStretch(2, 0)
+        # groups_grid.setColumnStretch(3, 0)
+        # groups_grid.setColumnStretch(4, 0)
 
         # Add the group to your window's main layout
         main_layout.addWidget(groups_box)
@@ -222,11 +255,20 @@ class AquilaWindow(QtWidgets.QWidget):
         self.min_dist = QtWidgets.QSpinBox(); self.min_dist.setRange(1, 50); self.min_dist.setValue(1)
         self.exts = QtWidgets.QLineEdit(".tif,.tiff,.png,.jpg,.jpeg")
         self.exts.setClearButtonEnabled(True)
-        self.copy_original = QtWidgets.QCheckBox("Copy original images into output folder"); self.copy_original.setChecked(True)
 
-        adv_layout.addWidget(QtWidgets.QLabel("Maxima smooth σ:"), 0, 0); adv_layout.addWidget(self.maxima_sigma, 0, 1)
-        adv_layout.addWidget(QtWidgets.QLabel("Minimum distance:"), 0, 2); adv_layout.addWidget(self.min_dist, 0, 3)
-        adv_layout.addWidget(QtWidgets.QLabel("Extensions:"), 1, 0); adv_layout.addWidget(self.exts, 1, 1, 1, 3)
+        label_maxima_smooth = QtWidgets.QLabel("Maxima smooth σ:")
+        label_maxima_smooth.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        adv_layout.addWidget(label_maxima_smooth, 0, 0); adv_layout.addWidget(self.maxima_sigma, 0, 1)
+
+        label_min_dist = QtWidgets.QLabel("Minimum distance:")
+        label_min_dist.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        adv_layout.addWidget(label_min_dist, 0, 2); adv_layout.addWidget(self.min_dist, 0, 3)
+
+        label_exts = QtWidgets.QLabel("Extensions:")
+        label_exts.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        adv_layout.addWidget(label_exts, 1, 0); adv_layout.addWidget(self.exts, 1, 1, 1, 3)
+
+        self.copy_original = QtWidgets.QCheckBox("Copy original images into output folder"); self.copy_original.setChecked(True)
         adv_layout.addWidget(self.copy_original, 2, 0, 1, 4)
 
         main_layout.addWidget(adv_group)
@@ -353,7 +395,6 @@ class AquilaWindow(QtWidgets.QWidget):
             copy_original=self.copy_original.isChecked()
         )
 
-
     # -----------------------
     # Upon "RUN" Button press
     # -----------------------
@@ -367,9 +408,6 @@ class AquilaWindow(QtWidgets.QWidget):
         self.btn_run.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.status.setText("Running…")
-
-        print(params.channels)
-        print(params.sample_groups)
 
         self.thread = QtCore.QThread()
         self.worker = Worker(params)

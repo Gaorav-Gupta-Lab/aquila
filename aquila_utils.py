@@ -223,17 +223,18 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
             log(f"[WARN] Could not copy original image: {e}")
 
     arr = robust_read_image(img_path)
-    pla_u8 = arr[..., 0]  # Red (PLA)
-    dapi_u8 = arr[..., 2] # Blue (DAPI)
+    red_u8 = arr[..., 0]  # Red (PLA)
+    green_u8 = arr[..., 1]  # Green (GFP)
+    blue_u8 = arr[..., 2] # Blue (DAPI)
 
     # DoG
-    dog = difference_of_gaussians_uint8_like(pla_u8, params.sigmaA, params.sigmaB)
+    dog = difference_of_gaussians_uint8_like(red_u8, params.sigmaA, params.sigmaB)
     dog_out = dest_dir / f"{sample_name}-PLA_halo_post_threshold.tif"
     dog_save = exposure.rescale_intensity(dog, out_range=(0, 65535)).astype(np.uint16)
     tiff.imwrite(str(dog_out), dog_save)
 
     # Nuclei
-    labels = segment_nuclei_from_dapi(dapi_u8,
+    labels = segment_nuclei_from_dapi(blue_u8,
                                       min_area_px=params.min_nucleus_area,
                                       max_area_px=params.max_nucleus_area,
                                       foreground=params.dapi_foreground,
@@ -268,7 +269,8 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
     overlay_png_path = dest_dir / f"{sample_name}_overlay.png"
     save_overlay_png(overlay_png_path, dog, labels, coords)
 
-    log(f"[OK] {file_name} -> {results_csv.name}  (nuclei={len(df_nuclei)}, foci={len(df_points)})")
+    log(f"[OK] Assigned to Group {group_name}\n(Nuclei: {len(df_nuclei)}, Foci: {len(df_points)})")
+    # log(f"[OK] {file_name} -> {results_csv.name}  (nuclei={len(df_nuclei)}, foci={len(df_points)})")
 
     return {
     "sample_name": sample_name,

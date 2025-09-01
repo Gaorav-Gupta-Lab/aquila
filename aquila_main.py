@@ -6,7 +6,6 @@ from AquilaWindow import AquilaWindow
 from MenuScreen import MenuScreen, Particle
 
 
-
 # --------------
 # Main App Class
 # --------------
