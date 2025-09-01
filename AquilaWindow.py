@@ -142,7 +142,14 @@ class AquilaWindow(QtWidgets.QWidget):
         lbl_groups = QtWidgets.QLabel("Sample group names:")
         self.sample_groups = QtWidgets.QLineEdit()
         lbl_groups.setBuddy(self.sample_groups)
-        self.sample_groups.setPlaceholderText("Enter group names separated by commas [must be unique], will assign default group if not matched")
+        self.sample_groups.setPlaceholderText("Group names separated by commas (eg. Untreated, Drug1, Drug2)")
+        self.sample_groups.setToolTip("""
+            <b>Sample Groups</b><br>
+            Enter group names separated by commas.<br>
+            <span style="color:red;">Must be unique and must appear in sample name</span>.<br>
+            If no match, a default group is assigned.
+        """)
+
         self.sample_groups.setClearButtonEnabled(True)
 
         # Put label in col 0, line edit spans all cols
@@ -281,37 +288,68 @@ class AquilaWindow(QtWidgets.QWidget):
         #-------------
 
         self.sigmaA.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Sigma A (DoG)</b>\n\nControls the finer blur in the Difference-of-Gaussians filter.\n\n<i>Lower</i> → sharper details; <i>higher</i> → smoother fine structure.</div>
+            <div style="white-space:normal;">
+            <b>Sigma A (DoG)</b><br><br>
+            Controls the finer blur in the Difference-of-Gaussians filter.<br><br>
+            <i>Lower</i> → sharper details; <i>higher</i> → smoother fine structure.</div>
         """)
         self.sigmaB.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Sigma B (DoG)</b>\n\nControls the “broader blur” in the Difference-of-Gaussians filter. Larger values suppress background and emphasize contrast between spots and their surroundings.</div>
+            <div style="white-space:normal;">
+            <b>Sigma B (DoG)</b><br><br>
+            Controls the “broader blur” in the Difference-of-Gaussians filter.<br><br>
+            <i>Higher</i> values reduce background subtracted in DoG calculations → more permissive foci detection.</div>
         """)
         self.prominence.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Prominence</b>\n\nMinimum strength a peak must have to count as a focus. Higher values make detection stricter (fewer, stronger peaks).</div>
+            <div style="white-space:normal;">
+            <b>Prominence</b><br><br>
+            Minimum strength a peak must have to count as a focus.<br><br>
+            <i>Higher</i> values make detection stricter (fewer, stronger peaks).</div>
         """)
         self.min_area.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Minimum Area</b>\n\nSmallest nucleus size (in pixels) to keep. Removes tiny specks or noise from being mistaken as nuclei.</div>
+            <div style="white-space:normal;">
+            <b>Minimum Area</b><br><br>
+            Smallest nucleus size (in pixels) to keep. Removes tiny specks or noise from being mistaken as nuclei.<br><br>
+            <i>Lower</i> values may include noise and specks; <i>higher</i> values may miss small nuclei.<br><br>
+            Note that this depends on image resolution.</div>
         """)
         self.max_area.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Maximum Area</b>\n\nLargest nucleus size (in pixels) to keep. Discards very large clusters that likely represent merged or invalid regions.</div>
+            <div style="white-space:normal;">
+            <b>Maximum Area</b><br><br>
+            Largest nucleus size (in pixels) to keep. Discards very large clusters that likely represent merged or invalid regions.<br><br>
+            Note that this depends on image resolution.</div>
         """)
         self.foreground.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Foreground Type</b>\n\nSelect the foreground type for DAPI images. More for aesthetic than anything else.</div>
+            <div style="white-space:normal;">
+            <b>Foreground Type</b><br><br>
+            Select the foreground type for DAPI images. More for aesthetic than anything else.</div>
         """)
         self.blur_sigma.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Blur Sigma</b>\n\nControls how much smoothing is applied before finding nuclei. Helps remove pixel-level noise but can blur fine boundaries.</div>
+            <div style="white-space:normal;">
+            <b>Blur Sigma</b><br><br>
+            Controls how much smoothing is applied before finding nuclei. Helps remove pixel-level noise but can blur fine boundaries.<br><br>
+            <i>Higher</i> values increase the blur effect and reduce watershedding efficiency.</div>
         """)
         self.seed_radius.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Seed Radius</b>\n\nRadius used to place initial markers for splitting nuclei. Larger radii → fewer seeds → fewer splits between touching nuclei.</div>
+            <div style="white-space:normal;">
+            <b>Seed Radius</b><br><br>
+            Radius used to place initial markers for splitting nuclei.<br><br>
+            <i>Larger</i> radii → fewer seeds → fewer splits between touching nuclei.</div>
         """)
         self.maxima_sigma.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Maxima Sigma</b>\n\nControls the amount of smoothing applied to the focus-detection map. Reduces spurious peaks but can merge nearby ones if too high.</div>
+            <div style="white-space:normal;"><b>Maxima Sigma</b><br><br>
+            Controls the amount of smoothing applied to the focus-detection map.<br><br>
+            <i>Higher</i> values reduce spurious peaks but can merge nearby ones if too high.</div>
         """)
+
         self.min_dist.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>Minimum Distance</b>\n\nMinimum allowed distance between detected maxima. Helps to avoid multiple detections of the same object.</div>
+            <div style="white-space:normal;"><b>Minimum Distance</b><br><br>
+            Minimum allowed distance between detected maxima. Helps to avoid multiple detections of the same object.<br><br>
+            <i>Higher</i> values enforce greater separation between detected objects.</div>
         """)
         self.exts.setToolTip("""
-            <div style="white-space:pre-wrap;"><b>File Extensions</b>\n\nComma-separated list of file extensions to process.</div>
+            <div style="white-space:normal;"><b>File Extensions</b><br><br>
+            Comma-separated list of file extensions to process.<br><br>
+            Only 3-channel images supported atm</div>
         """)
 
         # ------------------
