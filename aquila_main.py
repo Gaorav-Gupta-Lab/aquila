@@ -85,6 +85,10 @@ class App(QtWidgets.QMainWindow):
         self._mouse = QtCore.QPointF(e.position())
         super().mouseMoveEvent(e)
 
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._generate_particles()
+
     def _generate_particles(self):
         # Keep a moderate amount for performance
         count = 250

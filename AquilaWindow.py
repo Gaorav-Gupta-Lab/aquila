@@ -140,7 +140,7 @@ class AquilaWindow(QtWidgets.QWidget):
         lbl_groups = QtWidgets.QLabel("Sample group names:")
         self.sample_groups = QtWidgets.QLineEdit()
         lbl_groups.setBuddy(self.sample_groups)
-        self.sample_groups.setPlaceholderText("Enter group names separated by commas")
+        self.sample_groups.setPlaceholderText("Enter group names separated by commas [must be unique], will assign default group if not matched")
         self.sample_groups.setClearButtonEnabled(True)
 
         # Put label in col 0, line edit spans all cols
