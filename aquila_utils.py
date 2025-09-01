@@ -62,17 +62,19 @@ def find_group(sample_name: str, group_names: list[str]) -> str | None:
     groups = [g.lower() for g in group_names]
 
     # 1. First try to match by exact token (split sample_name into words/numbers)
-    tokens = re.findall(r"[A-Za-z0-9\+\-_]+", name)
-    for token in tokens:
-        if token in groups:
-            return group_names[groups.index(token)]
+    # tokens = re.findall(r"[A-Za-z0-9\+\-_]+", name)
+    # for token in tokens:
+    #     if token in groups:
+    #         return group_names[groups.index(token)]
 
     # 2. If no token match, try embedded search
     for g in groups:
         if g in name:
             return group_names[groups.index(g)]
+    #     else:
+    #         print("not here either")
 
-    return None
+    return "Default"
 
 def difference_of_gaussians_uint8_like(img_uint8: np.ndarray, sigmaA: float, sigmaB: float):
     """Return DoG as float (≈0..255 after shift), WITHOUT rescaling to uint16 for computation."""
@@ -269,7 +271,7 @@ def process_image_file(img_path: Path, params, output_dir=None, log=lambda *_: N
     overlay_png_path = dest_dir / f"{sample_name}_overlay.png"
     save_overlay_png(overlay_png_path, dog, labels, coords)
 
-    log(f"[OK] Assigned to Group {group_name}\n(Nuclei: {len(df_nuclei)}, Foci: {len(df_points)})")
+    log(f"[OK] Assigned to Group {group_name} -- (Nuclei: {len(df_nuclei)}, Foci: {len(df_points)})")
     # log(f"[OK] {file_name} -> {results_csv.name}  (nuclei={len(df_nuclei)}, foci={len(df_points)})")
 
     return {
@@ -324,7 +326,8 @@ def plot_results(input_df: pd.DataFrame, out_dir: Path, order=None):
         hue="sample_group",
         linecolor="black",
         order=order,
-        palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
+        palette="Blues",
+        # palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
         fill=True,
         density_norm="count",
         bw_adjust=0.8,
@@ -358,7 +361,8 @@ def plot_results(input_df: pd.DataFrame, out_dir: Path, order=None):
         hue="sample_group",
         linecolor="black",
         order=order,
-        palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
+        palette="Reds",
+        # palette=palette_violin if (order is None or len(set(df["sample_group"])) <= 3) else None,
         fill=True,
         density_norm="count",
         bw_adjust=0.8,
