@@ -120,15 +120,17 @@ class AquilaWindow(QtWidgets.QWidget):
         label_sigmaA = QtWidgets.QLabel("Sigma A (DoG):")
         label_sigmaA.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         detect_layout.addWidget(label_sigmaA, 0, 0); detect_layout.addWidget(self.sigmaA, 0, 1)
+
         label_sigmaB = QtWidgets.QLabel("Sigma B (DoG):")
         label_sigmaB.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         detect_layout.addWidget(label_sigmaB, 0, 2); detect_layout.addWidget(self.sigmaB, 0, 3)
+
         label_prominence = QtWidgets.QLabel("Prominence:")
         label_prominence.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         detect_layout.addWidget(label_prominence, 0, 4); detect_layout.addWidget(self.prominence, 0, 5)
 
-        main_layout.addWidget(detect_group)
 
+        main_layout.addWidget(detect_group)
 
         # ------------------
         # Sample Groups & Channels
@@ -243,6 +245,7 @@ class AquilaWindow(QtWidgets.QWidget):
         label_seed_radius.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         seg_layout.addWidget(label_seed_radius, 1, 4); seg_layout.addWidget(self.seed_radius, 1, 5)
 
+
         main_layout.addWidget(seg_group)
 
         # -------------------------
@@ -272,6 +275,44 @@ class AquilaWindow(QtWidgets.QWidget):
         adv_layout.addWidget(self.copy_original, 2, 0, 1, 4)
 
         main_layout.addWidget(adv_group)
+
+        #-------------
+        # ALL TOOLTIPS
+        #-------------
+
+        self.sigmaA.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Sigma A (DoG)</b>\n\nControls the finer blur in the Difference-of-Gaussians filter.\n\n<i>Lower</i> → sharper details; <i>higher</i> → smoother fine structure.</div>
+        """)
+        self.sigmaB.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Sigma B (DoG)</b>\n\nControls the “broader blur” in the Difference-of-Gaussians filter. Larger values suppress background and emphasize contrast between spots and their surroundings.</div>
+        """)
+        self.prominence.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Prominence</b>\n\nMinimum strength a peak must have to count as a focus. Higher values make detection stricter (fewer, stronger peaks).</div>
+        """)
+        self.min_area.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Minimum Area</b>\n\nSmallest nucleus size (in pixels) to keep. Removes tiny specks or noise from being mistaken as nuclei.</div>
+        """)
+        self.max_area.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Maximum Area</b>\n\nLargest nucleus size (in pixels) to keep. Discards very large clusters that likely represent merged or invalid regions.</div>
+        """)
+        self.foreground.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Foreground Type</b>\n\nSelect the foreground type for DAPI images. More for aesthetic than anything else.</div>
+        """)
+        self.blur_sigma.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Blur Sigma</b>\n\nControls how much smoothing is applied before finding nuclei. Helps remove pixel-level noise but can blur fine boundaries.</div>
+        """)
+        self.seed_radius.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Seed Radius</b>\n\nRadius used to place initial markers for splitting nuclei. Larger radii → fewer seeds → fewer splits between touching nuclei.</div>
+        """)
+        self.maxima_sigma.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Maxima Sigma</b>\n\nControls the amount of smoothing applied to the focus-detection map. Reduces spurious peaks but can merge nearby ones if too high.</div>
+        """)
+        self.min_dist.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>Minimum Distance</b>\n\nMinimum allowed distance between detected maxima. Helps to avoid multiple detections of the same object.</div>
+        """)
+        self.exts.setToolTip("""
+            <div style="white-space:pre-wrap;"><b>File Extensions</b>\n\nComma-separated list of file extensions to process.</div>
+        """)
 
         # ------------------
         # Run / Stop Buttons
