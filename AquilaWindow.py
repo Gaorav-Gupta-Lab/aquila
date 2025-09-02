@@ -63,12 +63,12 @@ class Worker(QtCore.QObject):
                 self.log.emit(f"[ERR] {fp.name}: {e}")
         if not self._stop_flag and all_results:
             combined = pd.concat(all_results, ignore_index=True)
-            summary_dir = Path(self.params.output_dir) / "Summary"
+            summary_dir = Path(self.params.output_dir) / "Results Summary"
             summary_dir.mkdir(exist_ok=True)
             combined.to_csv(summary_dir / "all_results_summary.csv", index=False)
             plot_path = plot_results(combined, summary_dir, order=self.params.sample_groups)
             if plot_path:
-                self.log.emit(f"[OK] Wrote violin summary → {plot_path}")
+                self.log.emit(f"[OK] Wrote summary graph → {plot_path}")
         self.finished.emit()
 
 
@@ -287,70 +287,24 @@ class AquilaWindow(QtWidgets.QWidget):
         # ALL TOOLTIPS
         #-------------
 
-        self.sigmaA.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Sigma A (DoG)</b><br><br>
-            Controls the finer blur in the Difference-of-Gaussians filter.<br><br>
-            <i>Lower</i> → sharper details; <i>higher</i> → smoother fine structure.</div>
-        """)
-        self.sigmaB.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Sigma B (DoG)</b><br><br>
-            Controls the “broader blur” in the Difference-of-Gaussians filter.<br><br>
-            <i>Higher</i> values reduce background subtracted in DoG calculations → more permissive foci detection.</div>
-        """)
-        self.prominence.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Prominence</b><br><br>
-            Minimum strength a peak must have to count as a focus.<br><br>
-            <i>Higher</i> values make detection stricter (fewer, stronger peaks).</div>
-        """)
-        self.min_area.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Minimum Area</b><br><br>
-            Smallest nucleus size (in pixels) to keep. Removes tiny specks or noise from being mistaken as nuclei.<br><br>
-            <i>Lower</i> values may include noise and specks; <i>higher</i> values may miss small nuclei.<br><br>
-            Note that this depends on image resolution.</div>
-        """)
-        self.max_area.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Maximum Area</b><br><br>
-            Largest nucleus size (in pixels) to keep. Discards very large clusters that likely represent merged or invalid regions.<br><br>
-            Note that this depends on image resolution.</div>
-        """)
-        self.foreground.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Foreground Type</b><br><br>
-            Select the foreground type for DAPI images. More for aesthetic than anything else.</div>
-        """)
-        self.blur_sigma.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Blur Sigma</b><br><br>
-            Controls how much smoothing is applied before finding nuclei. Helps remove pixel-level noise but can blur fine boundaries.<br><br>
-            <i>Higher</i> values increase the blur effect and reduce watershedding efficiency.</div>
-        """)
-        self.seed_radius.setToolTip("""
-            <div style="white-space:normal;">
-            <b>Seed Radius</b><br><br>
-            Radius used to place initial markers for splitting nuclei.<br><br>
-            <i>Larger</i> radii → fewer seeds → fewer splits between touching nuclei.</div>
-        """)
-        self.maxima_sigma.setToolTip("""
-            <div style="white-space:normal;"><b>Maxima Sigma</b><br><br>
-            Controls the amount of smoothing applied to the focus-detection map.<br><br>
-            <i>Higher</i> values reduce spurious peaks but can merge nearby ones if too high.</div>
-        """)
+        def add_tool_tips(widget, tool_tip_title, tool_tip_text):
+            widget.setToolTip(f"""
+                              <div style="white-space:normal; max-width: 300px;">
+                              <b>{tool_tip_title}</b><br><br>
+                              {tool_tip_text}</div>
+                              """)
 
-        self.min_dist.setToolTip("""
-            <div style="white-space:normal;"><b>Minimum Distance</b><br><br>
-            Minimum allowed distance between detected maxima. Helps to avoid multiple detections of the same object.<br><br>
-            <i>Higher</i> values enforce greater separation between detected objects.</div>
-        """)
-        self.exts.setToolTip("""
-            <div style="white-space:normal;"><b>File Extensions</b><br><br>
-            Comma-separated list of file extensions to process.<br><br>
-            Only 3-channel images supported atm</div>
-        """)
+        add_tool_tips(self.sigmaA, "Sigma A (DoG)", "Controls the finer blur in the Difference-of-Gaussians filter.<br><br><i>Lower</i> → sharper details; <i>higher</i> → smoother fine structure.</div>")
+        add_tool_tips(self.sigmaB, "Sigma B (DoG)", "Controls the broader blur in the Difference-of-Gaussians filter.<br><br><i>Higher</i> values reduce background subtracted in DoG calculations → more permissive foci detection.")
+        add_tool_tips(self.prominence, "Prominence", "Minimum strength a peak must have to count as a focus.<br><br><i>Higher</i> values make detection stricter (fewer, stronger peaks).")
+        add_tool_tips(self.min_area, "Minimum Area", "Smallest nucleus size (in pixels) to keep. Removes tiny specks or noise from being mistaken as nuclei.<br><br><i>Lower</i> values may include noise and specks; <i>higher</i> values may miss small nuclei.<br><br>Note that this depends on image resolution.")
+        add_tool_tips(self.max_area, "Maximum Area", "Largest nucleus size (in pixels) to keep. Discards very large clusters that likely represent merged or invalid regions.<br><br>Note that this depends on image resolution.")
+        add_tool_tips(self.foreground, "Foreground Type", "Select the foreground type for DAPI images. More for aesthetic than anything else.")
+        add_tool_tips(self.blur_sigma, "Blur Sigma", "Controls how much smoothing is applied before finding nuclei. Helps remove pixel-level noise but can blur fine boundaries.<br><br><i>Higher</i> values increase the blur effect and reduce watershedding efficiency.")
+        add_tool_tips(self.seed_radius, "Seed Radius", "Radius used to place initial markers for splitting nuclei.<br><br><i>Larger</i> radii → fewer seeds → fewer splits between touching nuclei.")
+        add_tool_tips(self.maxima_sigma, "Maxima Smooth Sigma", "Controls the amount of smoothing applied to the focus-detection map.<br><br><i>Higher</i> values reduce spurious peaks but can merge nearby ones if too high.")
+        add_tool_tips(self.min_dist, "Minimum Distance", "Minimum allowed distance between detected maxima. Helps to avoid multiple detections of the same object.<br><br><i>Higher</i> values enforce greater separation between detected objects.")
+        add_tool_tips(self.exts, "File Extensions", "Comma-separated list of file extensions to process.<br><br>Only 3-channel images supported atm")
 
         # ------------------
         # Run / Stop Buttons

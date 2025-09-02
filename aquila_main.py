@@ -14,7 +14,7 @@ class App(QtWidgets.QMainWindow):
     def __init__(self, logo_path="", icon_path=""):
         super().__init__()
         self.setWindowTitle("AQUILA")
-        self.resize(1080, 720)
+        self.resize(1200, 800)
 
         if icon_path:
             qicon = QtGui.QIcon(icon_path)
